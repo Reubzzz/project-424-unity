@@ -50,6 +50,7 @@ public struct Perrinn424Data					// ID			DESCRIPTION							UNITS		RESOLUTION		EX
 	public const int InputBrakePressure			= 42;		// Brake pressure in the circuit		bar			10000			305000 = 30.5 bar
 	public const int InputSteerAngle			= 43;		// Steer angle for the steering column	deg			10000			155000 = 15.5 degrees
 	public const int InputGear					= 44;		// Gear (forward / neutral / reverse)				0 = Neutral, 1 = Forward, -1 = Reverse
+	public const int InputDrsPosition			= 45;		// DRS position. 0 = closed, 1 = open	%			1000			1000 = 1.0 = 100% open
 	}
 
 
@@ -70,7 +71,8 @@ public class Perrinn424CarController : VehicleBase
 
 	// Powertrain and dynamics
 
-	public InputSettings input = new InputSettings();
+	[UnityEngine.Serialization.FormerlySerializedAs("input")]
+	public PedalSetup pedals = new PedalSetup();
 	public MotorGeneratorUnit.Settings frontMgu = new MotorGeneratorUnit.Settings();
 	public MotorGeneratorUnit.Settings rearMgu = new MotorGeneratorUnit.Settings();
 
@@ -313,6 +315,7 @@ public class Perrinn424CarController : VehicleBase
 
 		// Initialize internal data
 
+		forceRaycastIgnoreColliders = true;
 		m_gearMode = (int)Gearbox.AutomaticGear.N;
 		m_prevGearMode = (int)Gearbox.AutomaticGear.N;
 		data.Set(Channel.Input, InputData.AutomaticGear, m_gearMode);
@@ -454,8 +457,8 @@ public class Perrinn424CarController : VehicleBase
 			// Being in a separate class allows all intermediate steps to be traced separately
 			// (pedal > mgu throttle > electrical torque > mechanical torque > wheel torque)
 
-			m_throttleInput = input.GetThrottleInput(throttlePosition);
-			m_brakePressure = input.GetBrakePressure(brakePosition);
+			m_throttleInput = pedals.GetThrottleInput(throttlePosition);
+			m_brakePressure = pedals.GetBrakePressure(brakePosition);
 
 			// Process steering
 

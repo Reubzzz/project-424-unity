@@ -6,15 +6,22 @@ using Perrinn424.AerodynamicsSystem;
 
 public class Perrinn424Aerodynamics : VehicleBehaviour
 {
-    public AltitudeConverter altitudeConverter;
+	public AltitudeConverter altitudeConverter;
 
 	[Space(5)]
 	public float deltaISA                  = 0.0f;
 	public float dRSActivationDelay        = 0.0f;
 	public float dRSActivationTime         = 0.0f;
-	public float frontFlapStaticAngle      = 0.0f;
-	public float frontFlapFlexDeltaAngle   = 0.0f;
-	public float frontFlapFlexMaxDownforce = 0.0f;
+	
+	public float frontFlapStaticAngle         = 5.0f;
+	public float frontFlapDRSAngle            = -15.0f;
+	public float frontFlapSCz0				  = 0.34f;
+	public float frontFlapSCz_perDeg          = 0.03f;
+	
+	//public float frontFlapFlexMaxDownforce    = 10000.0f;
+	public float frontFlapDeflectionPreload   = 470.0f;
+	public float frontFlapDeflectionStiffness = -0.006f;
+	public float frontFlapDeflectionMax       = -5.0f;
 
 	[Serializable]
 	public class AeroSettings
@@ -53,8 +60,11 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 
 	// Exposed state
 
-	[HideInInspector] public float flapAngle   = 1.0f;
+	[HideInInspector] public float flapAngle   = 0.0f;
+	[HideInInspector] public float flapDeflection = 0.0f;
+	[HideInInspector] public float flapForce = 0.0f;
 	[HideInInspector] public bool  DRSclosing  = false;
+	[HideInInspector] public bool  DRSopenButton  = false;
 	[HideInInspector] public float DRS      = 0;
 	[HideInInspector] public float SCzFront = 0;
 	[HideInInspector] public float SCzRear  = 0;
@@ -76,7 +86,6 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 
 	Atmosphere atmosphere = new Atmosphere();
 	float DRStime = 0;
-
 
 	// Function Name: CalcAeroCoeff
 	// This function calculates a given aerodynamic coefficient based on:
@@ -101,7 +110,7 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 		fRH_mm = Mathf.Clamp(fRH_mm, 0, 100);
 		rRH_mm = Mathf.Clamp(rRH_mm, 0, 100);
 		DRSpos = Mathf.Clamp(DRSpos, 0, 1);
-		flapAngle_deg = Mathf.Clamp(flapAngle_deg, -5, 5);
+		flapAngle_deg = Mathf.Clamp(flapAngle_deg, -15, 15);
 		yawAngle_deg = Mathf.Clamp(Math.Abs(yawAngle_deg), 0, 10);
 		steerAngle_deg = Mathf.Clamp(Math.Abs(steerAngle_deg), 0, 20);
 		rollAngle_deg = Mathf.Clamp(Math.Abs(rollAngle_deg), 0, 3);
@@ -125,21 +134,32 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 	//  This function calculates the DRS position
 	//
 	//	 [IN]	throttlePos: 0 to 1 [-]
-	//	 [IN]	brakePos:    0 to 1 [-]
+	//	 [IN]	brakePressure: [bar]
 	//	 [IN]	DRSpos:      0 to 1 [-]
 	//
 	//	 [OUT]	DRSpos:      0 to 1 [-]
 
-	float CalcDRSPosition(float throttlePos, float brakePos, float DRSpos)
+	float CalcDRSPosition(float throttlePos, float brakePressure, float DRSpos, bool DRSbutton)
 	{
-		if (throttlePos == 1 && brakePos == 0 && !DRSclosing)
+		if (throttlePos == 1 && brakePressure < 1 && !DRSclosing)
 		{
-			DRStime -= Time.deltaTime;
-			if (DRStime <= 0.0f)
+			if (DRSbutton == true)
+				DRSopenButton = true;
+
+			if (DRSopenButton)
+            {
 				DRSpos += Time.deltaTime * (1 / dRSActivationTime);
+			}
+            else
+            {
+				DRStime -= Time.deltaTime;
+				if (DRStime <= 0.0f)
+					DRSpos += Time.deltaTime * (1 / dRSActivationTime);
+			}
 		}
 		else
 		{
+			DRSopenButton = false;
 			DRSclosing = true;
 			if (DRSpos == 0)
 			{
@@ -148,39 +168,67 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 			DRSpos -= Time.deltaTime * (1 / dRSActivationTime);
 			DRStime = dRSActivationDelay;
 		}
-		DRSpos = Mathf.Clamp(DRSpos, 0, 1);
+		DRSpos = Mathf.Clamp(DRSpos, 0, 1.0f);
+
+		if (DRSpos == 1)
+			DRSopenButton = false;
+
 		return DRSpos;
 	}
 
 
+	public override void OnEnableVehicle() {
+		flapAngle = frontFlapStaticAngle;
+	}
+	
+	
 	public override void FixedUpdateVehicle()
 	{
 		Rigidbody rb = vehicle.cachedRigidbody;
 
 		// Getting driver's input
-		int[] input            = vehicle.data.Get(Channel.Input);
-		float throttlePosition = input[InputData.Throttle] / 10000.0f;
-		float brakePosition    = input[InputData.Brake] / 10000.0f;
 
-        float dynamicPressure = CalculateDynamicPressure();
+		int[] customData = vehicle.data.Get(Channel.Custom);
+		bool processedInputs = customData[Perrinn424Data.EnableProcessedInput] != 0;
+		if (processedInputs)
+			{
+			// Processed DRS position from the 424 data
+			DRS = customData[Perrinn424Data.InputDrsPosition] / 1000.0f;
+			}
+		else
+			{
+			// Detecting DRS button pressed and acknowledge
+			int[] raceInput = vehicle.data.Get(Channel.RaceInput);
+			bool drsPressed = raceInput[RaceInputData.Drs] != 0;
+			raceInput[RaceInputData.Drs] = 0;
+
+			// Raw inputs from the 424 data
+			float throttleInput = customData[Perrinn424Data.ThrottleInput] / 1000.0f;
+			float brakePressure = customData[Perrinn424Data.BrakePressure] / 1000.0f;
+
+			// Calculating DRS position
+			DRS = CalcDRSPosition(throttleInput, brakePressure, DRS, drsPressed);
+			}
+
+		// Feeding DRS position to the car data bus
+		customData[Perrinn424Data.DrsPosition] = Mathf.RoundToInt(DRS * 1000);
+
+		float dynamicPressure = CalculateDynamicPressure();
 		rho = (float)atmosphere.Density;
 
 		// Setting vehicle parameters for the aero model
-		yawAngle        = vehicle.speed > 1.0f? vehicle.speedAngle : 0.0f;
+		yawAngle        = vehicle.speed > 1.0f ? vehicle.speedAngle : 0.0f;
 		steerAngle      = (vehicle.wheelState[0].steerAngle + vehicle.wheelState[1].steerAngle) / 2;
-		fronRollAngle   = vehicle.data.Get(Channel.Custom, Perrinn424Data.FrontRollAngle) / 1000.0f;
-		rearRollAngle   = vehicle.data.Get(Channel.Custom, Perrinn424Data.RearRollAngle) / 1000.0f;
+		fronRollAngle   = customData[Perrinn424Data.FrontRollAngle] / 1000.0f;
+		rearRollAngle   = customData[Perrinn424Data.RearRollAngle] / 1000.0f;
 		rollAngle       = (fronRollAngle + rearRollAngle) / 2;
-		frontRideHeight = vehicle.data.Get(Channel.Custom, Perrinn424Data.FrontRideHeight);
-		rearRideHeight  = vehicle.data.Get(Channel.Custom, Perrinn424Data.RearRideHeight);
-
-		// Calculating DRS position and feeding to the car data bus
-		DRS = CalcDRSPosition(throttlePosition, brakePosition, DRS);
-		vehicle.data.Set(Channel.Custom, Perrinn424Data.DrsPosition, Mathf.RoundToInt(DRS * 1000));
+		frontRideHeight = customData[Perrinn424Data.FrontRideHeight];
+		rearRideHeight  = customData[Perrinn424Data.RearRideHeight];
 
 		// Calculating front flap deflection due to aeroelasticity
-		flapAngle = frontFlapStaticAngle + downforceFront * frontFlapFlexDeltaAngle / frontFlapFlexMaxDownforce;
-		flapAngle = Mathf.Clamp(flapAngle, -5, 5);
+		flapForce = (frontFlapSCz0 + frontFlapSCz_perDeg * flapAngle) * dynamicPressure;
+		flapDeflection = Mathf.Max(frontFlapDeflectionMax, Mathf.Max(0, flapForce - frontFlapDeflectionPreload) * frontFlapDeflectionStiffness);
+		flapAngle = Mathf.Clamp(frontFlapStaticAngle + flapDeflection + DRS * frontFlapDRSAngle, -15, 15);
 
 		// Calculating aero forces
 		if (front.applicationPoint != null)
@@ -215,29 +263,30 @@ public class Perrinn424Aerodynamics : VehicleBehaviour
 	{
 		if (drsFlap != null)
 		{
-	        float drsAngle = Mathf.Lerp(drsClosedAngle, drsOpenAngle, DRS);
-	        drsFlap.localRotation = Quaternion.Euler(drsAngle, 0.0f, 0.0f);
+			float drsAngle = Mathf.Lerp(drsClosedAngle, drsOpenAngle, DRS);
+			drsFlap.localRotation = Quaternion.Euler(drsAngle, 0.0f, 0.0f);
 		}
 
 		if (frontFlap != null)
 		{
-        	float flapNorm  = (flapAngle - frontFlapStaticAngle) / ((frontFlapStaticAngle + frontFlapFlexDeltaAngle) - frontFlapStaticAngle);
-        	float visualFlapAngle = Mathf.Lerp(frontFlapStaticAngle, frontFlapStaticAngle + frontFlapFlexDeltaAngle, flapNorm);
-        	frontFlap.localRotation = Quaternion.Euler(visualFlapAngle + frontFlapRestAngle, 0.0f, 0.0f);
+			float flapNorm  = (flapAngle - 15.0f) / (-30.0f);
+			float visualFlapAngle = Mathf.Lerp(15.0f, -15.0f, flapNorm);
+			
+			frontFlap.localRotation = Quaternion.Euler(visualFlapAngle + frontFlapRestAngle, 0.0f, 0.0f);
 		}
 	}
 
 
-    private float CalculateDynamicPressure()
-    {
-        Rigidbody rb = vehicle.cachedRigidbody;
-        float vSquared = rb.velocity.sqrMagnitude;
-        float y = rb.worldCenterOfMass.y;
-        float altitude = altitudeConverter.ToAltitude(y);
-        atmosphere.UpdateAtmosphere(altitude, deltaISA);
-        float dynamicPressure = (float)(atmosphere.Density * vSquared / 2.0);
-        return dynamicPressure;
-    }
+	private float CalculateDynamicPressure()
+	{
+		Rigidbody rb = vehicle.cachedRigidbody;
+		float vSquared = rb.velocity.sqrMagnitude;
+		float y = rb.worldCenterOfMass.y;
+		float altitude = altitudeConverter.ToAltitude(y);
+		atmosphere.UpdateAtmosphere(altitude, deltaISA);
+		float dynamicPressure = (float)(atmosphere.Density * vSquared / 2.0);
+		return dynamicPressure;
+	}
 
 
 	// Telemetry

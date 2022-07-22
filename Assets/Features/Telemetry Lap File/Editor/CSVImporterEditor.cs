@@ -1,7 +1,8 @@
 ﻿using Perrinn424.AutopilotSystem;
 using System;
+using System.IO;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.PackageManager;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,14 +18,6 @@ namespace Perrinn424.TelemetryLapSystem.Editor
             Import();
         }
 
-        void OnGUI()
-        {
-            if (GUILayout.Button("Import"))
-            {
-                Import();
-            }
-        }
-
         private static void Import()
         {
             string path = EditorUtility.OpenFilePanel("CSV Importer", "./Telemetry", "metadata");
@@ -32,21 +25,35 @@ namespace Perrinn424.TelemetryLapSystem.Editor
             {
                 try
                 {
-                    VPReplayAsset asset = TelemetryLapToReplayAsset.Create(path);
-                    string filePath = $"Assets/Replays/{asset.name}.asset";
-                    AssetDatabase.CreateAsset(asset, filePath);
-                    if (EditorUtility.DisplayDialog("CSV Importer", $"Replay Asset correctly created at {filePath}. Do you want to use it at the autopilot?", "ok", "cancel"))
+                    TelemetryLapAsset telemetryLap = FileFormatConverterUtils.CSVToTelemetryLapAsset(path);
+                    VPReplayAsset replayAsset = FileFormatConverterUtils.TelemetryLapToReplayAsset(telemetryLap);
+                    RecordedLap recordedLap = FileFormatConverterUtils.TelemetryLapToRecordedLap(telemetryLap);
+
+                    string telemetryLapFilePath = $"Assets/Replays/{telemetryLap.name}.asset";
+                    AssetDatabase.CreateAsset(telemetryLap, telemetryLapFilePath);
+
+                    string replayFilePath = $"Assets/Replays/{replayAsset.name}_replay.asset";
+                    AssetDatabase.CreateAsset(replayAsset, replayFilePath);
+
+                    string recorededLapFilePath = $"Assets/Replays/{recordedLap.name}_autopilot.asset";
+                    AssetDatabase.CreateAsset(recordedLap, recorededLapFilePath);
+
+                    if (EditorUtility.DisplayDialog("CSV Importer", $"CSV correctly created at {telemetryLapFilePath}. Do you want to use the replay assset at the autopilot?", "ok", "cancel"))
                     {
-                        AutopilotProvider provider = FindObjectOfType<AutopilotProvider>();
-                        provider.replayAsset = asset;
-                        Selection.activeGameObject = provider.gameObject;
-                        Scene scene = provider.gameObject.scene;
+                        Autopilot autopilot = FindObjectInSceneEvenIfIsDisabled<Autopilot>();
+                        autopilot.recordedLap = recordedLap;
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(autopilot);
+                        AutopilotProvider provider = FindObjectInSceneEvenIfIsDisabled<AutopilotProvider>();
+                        provider.replayAsset = replayAsset;
+
+                        Selection.activeGameObject = autopilot.gameObject;
+                        Scene scene = autopilot.gameObject.scene;
                         EditorSceneManager.MarkSceneDirty(scene);
                         EditorSceneManager.SaveScene(scene);
                     }
                     else
                     {
-                        Selection.activeObject = asset;
+                        Selection.activeObject = telemetryLap;
                     }
                 }
                 catch (Exception e)
@@ -56,5 +63,29 @@ namespace Perrinn424.TelemetryLapSystem.Editor
                 }
             }
         }
+
+        private static T FindObjectInSceneEvenIfIsDisabled<T>() where T : UnityEngine.Object
+        {
+            T[] objects = Resources.FindObjectsOfTypeAll<T>();
+
+            return objects.First(o => !EditorUtility.IsPersistent(o)); //first object, enabled or disabled that it's on the scene
+        }
+
+
+        [MenuItem("Assets/Create Autopilot file from Replay")]
+        static void CreateAutopilotFileFromReplay()
+        {
+            RecordedLap recordedLap = FileFormatConverterUtils.ReplayAssetToRecordedLap(Selection.activeObject as VPReplayAsset);
+            string recorededLapFilePath = $"Assets/Replays/{recordedLap.name}_autopilot.asset";
+            AssetDatabase.CreateAsset(recordedLap, recorededLapFilePath);
+        }
+
+        [MenuItem("Assets/Create Autopilot file from Replay", true)]
+        static bool ValidateCreateAutopilotFileFromReplay()
+        {
+            // Return false if no transform is selected.
+            return Selection.activeObject is VPReplayAsset;
+        }
+
     } 
 }

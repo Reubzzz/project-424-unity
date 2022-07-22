@@ -640,7 +640,7 @@ MonoBehaviour:
   mass: 25
   radius: 0.34
   center: {x: 0, y: 0, z: 0}
-  suspensionDistance: 0.06
+  suspensionDistance: 0.065
   suspensionAnchor: 0
   springRate: 170000
   damperRate: 3000
@@ -677,7 +677,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2483877714874542022}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.76, y: 0.26, z: -3.151}
+  m_LocalPosition: {x: -0.76, y: 0.24, z: -3.151}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 2483877714929404271}
@@ -698,7 +698,7 @@ MonoBehaviour:
   mass: 25
   radius: 0.34
   center: {x: 0, y: 0, z: 0}
-  suspensionDistance: 0.07
+  suspensionDistance: 0.09
   suspensionAnchor: 0
   springRate: 170000
   damperRate: 3000
@@ -853,6 +853,7 @@ GameObject:
   - component: {fileID: 5326984190949575772}
   - component: {fileID: 2623578543911979919}
   - component: {fileID: 2218053485607648859}
+  - component: {fileID: 1193015119273251600}
   m_Layer: 8
   m_Name: Dynamics
   m_TagString: Untagged
@@ -951,47 +952,51 @@ MonoBehaviour:
     altitudeReference: 0
     unityReference: 0
   deltaISA: 0
-  dRSActivationDelay: 2
+  dRSActivationDelay: 0.5
   dRSActivationTime: 0.25
-  frontFlapStaticAngle: 2
-  frontFlapFlexDeltaAngle: -8
-  frontFlapFlexMaxDownforce: 10000
+  frontFlapStaticAngle: 4
+  frontFlapDRSAngle: -13
+  frontFlapSCz0: 0.33
+  frontFlapSCz_perDeg: 0.037
+  frontFlapDeflectionPreload: 490
+  frontFlapDeflectionStiffness: -0.0055
+  frontFlapDeflectionMax: -4
   front:
     applicationPoint: {fileID: 2483877716415502929}
-    constant: 4.32
-    frontRideHeightCoefficient: -0.076
-    frontRideHeight2Coefficient: 0.000557
-    rearRideHeightCoefficient: 0.01
-    rearRideHeight2Coefficient: 0
-    absoluteYawCoefficient: -0.0063
-    absoluteSteerCoefficient: -0.0117
-    absoluteRollCoefficient: -0.1367
-    dRS_Coefficient: -0.1
-    frontFlapCoefficient: 0.07
+    constant: 2.87
+    frontRideHeightCoefficient: -0.0141
+    frontRideHeight2Coefficient: -0.000387
+    rearRideHeightCoefficient: 0.0258
+    rearRideHeight2Coefficient: -0.000113
+    absoluteYawCoefficient: -0.02
+    absoluteSteerCoefficient: -0.01
+    absoluteRollCoefficient: -0.08
+    dRS_Coefficient: 0.15
+    frontFlapCoefficient: 0.091
   rear:
     applicationPoint: {fileID: 2483877716124499243}
-    constant: 2.93
-    frontRideHeightCoefficient: 0
-    frontRideHeight2Coefficient: 0
-    rearRideHeightCoefficient: 0.0148
-    rearRideHeight2Coefficient: -0.000249
-    absoluteYawCoefficient: -0.0087
-    absoluteSteerCoefficient: -0.0034
-    absoluteRollCoefficient: -0.1074
-    dRS_Coefficient: -0.5
-    frontFlapCoefficient: -0.022
+    constant: 2.77
+    frontRideHeightCoefficient: 0.0089
+    frontRideHeight2Coefficient: -0.0000444
+    rearRideHeightCoefficient: 0.0385
+    rearRideHeight2Coefficient: -0.000355
+    absoluteYawCoefficient: -0.03
+    absoluteSteerCoefficient: -0.01
+    absoluteRollCoefficient: -0.09
+    dRS_Coefficient: -1.38
+    frontFlapCoefficient: -0.027
   drag:
     applicationPoint: {fileID: 2483877716124499243}
-    constant: 1.2
-    frontRideHeightCoefficient: 0
-    frontRideHeight2Coefficient: 0
-    rearRideHeightCoefficient: 0
-    rearRideHeight2Coefficient: 0
-    absoluteYawCoefficient: 0.0017
-    absoluteSteerCoefficient: 0.001
-    absoluteRollCoefficient: -0.0104
-    dRS_Coefficient: -0.2
-    frontFlapCoefficient: 0.002
+    constant: 0.98
+    frontRideHeightCoefficient: 0.0085
+    frontRideHeight2Coefficient: -0.0000978
+    rearRideHeightCoefficient: 0.0041
+    rearRideHeight2Coefficient: -0.0000168
+    absoluteYawCoefficient: 0
+    absoluteSteerCoefficient: 0
+    absoluteRollCoefficient: 0
+    dRS_Coefficient: -0.343
+    frontFlapCoefficient: 0
   emitTelemetry: 0
   drsFlap: {fileID: 3609935057921437074}
   drsClosedAngle: 0
@@ -999,7 +1004,10 @@ MonoBehaviour:
   frontFlap: {fileID: 5044577816045206950}
   frontFlapRestAngle: 0
   flapAngle: 0
+  flapDeflection: 0
+  flapForce: 0
   DRSclosing: 0
+  DRSopenButton: 0
   DRS: 0
   SCzFront: 0
   SCzRear: 0
@@ -1075,8 +1083,8 @@ MonoBehaviour:
   isAudioEnabled: 1
   contactLoopClip: {fileID: 8300000, guid: ae99b72385dd3c743a614e8f3bc6ea7e, type: 3}
   output: {fileID: 0}
-  minVolume: 0.2
-  maxVolume: 1
+  minVolume: 0.5
+  maxVolume: 1.25
   minSpeed: 13
   maxSpeed: 100
   minPitch: 0.9
@@ -1093,6 +1101,25 @@ MonoBehaviour:
     fontColor: {r: 1, g: 1, b: 1, a: 1}
     scrollLines: 0
   defaultFont: {fileID: 0}
+--- !u!114 &1193015119273251600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2483877715235533906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -751844543, guid: b8535f898910b5d4ebb7a7c6a7dded9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  axle: 1
+  wheel: 2
+  minCompression: 0.9
+  maxSpringRateOffset: 400000
+  adjustDamper: 0
+  maxDamperRateOffset: 500
+  linearityFactor: 0.5
 --- !u!1 &2483877715271342903
 GameObject:
   m_ObjectHideFlags: 0
@@ -1102,9 +1129,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2483877715271342902}
-  - component: {fileID: 2483877715271342922}
-  - component: {fileID: 2483877715271342923}
-  - component: {fileID: 2483877715271342901}
+  - component: {fileID: 7806771898872592265}
   m_Layer: 8
   m_Name: Input
   m_TagString: Untagged
@@ -1126,7 +1151,7 @@ Transform:
   m_Father: {fileID: 2483877716221292743}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2483877715271342922
+--- !u!114 &7806771898872592265
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1135,125 +1160,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 2483877715271342903}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 541707468, guid: b8535f898910b5d4ebb7a7c6a7dded9b, type: 3}
+  m_Script: {fileID: 11500000, guid: faef65e9e7c17c445ad5b5e25e433df2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  throttleAndBrakeMode: 0
-  brakeOnThrottleBackwards: 0
-  applyClutchOnHandbrake: 1
-  unlockDrivelineOnHandbrake: 1
-  progressiveSteerMode: 0
-  movementRate: 0.25
-  autoCenterRate: 0.01
-  ignitionKey: 107
-  steerAxis: Horizontal
-  throttleAndBrakeAxis: Vertical
-  handbrakeAxis: Jump
-  clutchAxis: Fire1
-  gearShiftButton: Fire2
-  gearModeSelectButton: Fire3
-  keyboardNumbersSelectGears: 1
-  neutralGear: 110
-  reverseGear: 114
-  externalThrottle: 0
-  reverse: 0
-  externalBrake: 0
-  externalHandbrake: 0
-  externalSteer: 0
-  externalClutch: 0
-  externalIgnition: 1
-  lockBrakesOnEnable: 0
---- !u!114 &2483877715271342923
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2483877715271342903}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1679343879, guid: b8535f898910b5d4ebb7a7c6a7dded9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  selectedDevice: 1
-  deviceModel: 2
-  configuredWheelRange: 850
-  steeringNonLinearBias: 0.5
-  digitalHandbrakeRate: 2
-  unlockDrivelineOnHandbrake: 0
-  disableClutchInput: 0
-  fallbackToStandardInput: 1
-  disableVehicleSteeringAids: 0
-  throttleRangeMin: 0
-  throttleRangeMax: 1
-  brakeRangeMin: 0.40317813
-  brakeRangeMax: 1
-  clutchRangeMin: 0
-  clutchRangeMax: 0.6
-  ignitionKeyPosition: 0
-  automaticGearPosition: 3
-  manualGearPosition: 0
-  handbrakeLocked: 0
-  logicalTireWidth: 0.3
-  forceIntensity: 0.5
-  weightIntensity: 1.5
-  nonLinearBias: 0.7
-  damperCoefficient: 0.25
-  showForceFeedbackUI: 0
-  forceFeedbackUI: {fileID: 0}
-  gearShiftUp: 4
-  gearShiftDown: 5
-  automaticGearNext: 15
-  automaticGearPrev: 17
-  ignitionKeyOn: 102
-  ignitionKeyOff: 103
-  handbrake: 105
-  brakeLockToggle: 100
-  retarderShiftUp: 18
-  retarderShiftDown: 16
-  g29GearShiftUp: 4
-  g29GearShiftDown: 5
-  g29AutomaticGearNext: 5
-  g29AutomaticGearPrev: 4
-  g29IgnitionKeyOn: 102
-  g29IgnitionKeyOff: 103
-  g29Handbrake: 105
-  g29BrakeLockToggle: 100
-  g29RetarderShiftUp: 10
-  g29RetarderShiftDown: 11
-  forceFeedbackGui: 0
-  positionX: -8
-  positionY: 8
-  font: {fileID: 12800000, guid: 68e91a955efe04085922337eb01d7626, type: 3}
-  enableTestEffects: 0
-  enableForce: 0
-  force: 0
-  enableSpring: 0
-  springCenter: 0
-  springSaturation: 0
-  springSlope: 0
-  enableDamper: 0
-  damperSlope: 0
-  enableFriction: 0
-  frictionSaturation: 0
-  frictionCoefficient: 0
-  debugGizmos: 0
-  debugInfo: 0
---- !u!114 &2483877715271342901
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2483877715271342903}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1334591726, guid: b8535f898910b5d4ebb7a7c6a7dded9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  resetVehicleKey: 13
-  heightIncrement: 1.6
-  resetState: 0
+  inputUserName: Perrinn424
+  forceFeedbackEnabled: 1
+  rumbleEnabled: 0
+  forceFeedbackSettings:
+    forceGain: 0.75
+    steeringSensitivity: 0.3
+    nonLinearBias: 0.55
+    damperEffect: 0.5
+    frictionEffect: 0.05
+    frictionMaxSpeed: 2
+  rumbleSettings:
+    idleIntensity: 0.2
+    minIntensity: 0.1
+    maxIntensity: 0.7
+    minFrequency: 15
+    maxFrequency: 100
+    maxVehicleSpeed: 20
+    suspensionGain: 0.2
+    suspensionCutSpeed: 0.5
+    suspensionMaxSpeed: 5
 --- !u!1 &2483877715507374421
 GameObject:
   m_ObjectHideFlags: 0
@@ -1448,7 +1377,7 @@ MonoBehaviour:
   mass: 25
   radius: 0.34
   center: {x: 0, y: 0, z: 0}
-  suspensionDistance: 0.06
+  suspensionDistance: 0.065
   suspensionAnchor: 0
   springRate: 170000
   damperRate: 3000
@@ -1485,7 +1414,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2483877715907473430}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.76, y: 0.26, z: -3.151}
+  m_LocalPosition: {x: 0.76, y: 0.24, z: -3.151}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 2483877714929404271}
@@ -1506,7 +1435,7 @@ MonoBehaviour:
   mass: 25
   radius: 0.34
   center: {x: 0, y: 0, z: 0}
-  suspensionDistance: 0.07
+  suspensionDistance: 0.09
   suspensionAnchor: 0
   springRate: 170000
   damperRate: 3000
@@ -1786,6 +1715,7 @@ MonoBehaviour:
   dontAdjustSuspensionForcePoint: 0
   disableSteerAngleFix: 0
   disableWheelReferenceFrameFix: 0
+  forceRaycastIgnoreColliders: 0
   scaleFactor: 1
   vehicleSleepCriteria: 0
   showContactGizmos: 1
@@ -1816,10 +1746,10 @@ MonoBehaviour:
   rearTires: {fileID: 11400000, guid: 090ba72abe8af4e0d9ad3ca0fbdb21e0, type: 2}
   frontAxleReference: {fileID: 2483877716415502929}
   rearAxleReference: {fileID: 2483877716124499243}
-  input:
+  pedals:
     throttleShape: 1.6
     brakeShape: 2
-    brakePedalGain: 0.9
+    brakePedalGain: 1
   frontMgu:
     torqueMap: {fileID: 11400000, guid: 05ff9bb249be3ec4caa5acdf502661fc, type: 2}
     inertia: 0.008
@@ -5107,12 +5037,12 @@ PrefabInstance:
     - target: {fileID: 1870792708778580192, guid: 900d97410ebe6a2498cb8dc92ac53e64,
         type: 3}
       propertyPath: wheels.bumpMaxVolume
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1870792708778580192, guid: 900d97410ebe6a2498cb8dc92ac53e64,
         type: 3}
       propertyPath: wheels.bumpMinVolume
-      value: 0.06
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1870792708778580192, guid: 900d97410ebe6a2498cb8dc92ac53e64,
         type: 3}
